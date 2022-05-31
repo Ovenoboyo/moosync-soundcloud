@@ -1,111 +1,40 @@
-import { MoosyncExtensionTemplate, Playlist, PlayerState, Song, SongQueue } from '@moosync/moosync-types'
-import { resolve } from 'path'
+import { MoosyncExtensionTemplate } from '@moosync/moosync-types'
+import { SoundcloudApi } from './soundcloudApi'
 
-const sampleSong: Song = {
-  _id: 'Another random ID',
-  title: 'Example song',
-  duration: 0,
-  date_added: Date.now(),
-  type: 'URL',
-  playbackUrl:
-    'https://file-examples.com/storage/fe8788b10b62489539afcfd/2017/11/file_example_MP3_5MG.mp3' /* If the URL is directly playable, duration is fetched at runtime */
-}
-
-const samplePlaylist: Playlist = {
-  playlist_id: 'Some random generated ID',
-  playlist_name: 'Hello this is a playlist',
-  playlist_song_count: 69,
-  playlist_coverPath: 'https://avatars.githubusercontent.com/u/91860733?s=200&v=4',
-  icon: resolve(__dirname, '../assets/icon.svg')
-}
-export class MyExtension implements MoosyncExtensionTemplate {
-  private interval: ReturnType<typeof setInterval> | undefined
-
+export class SoundCloudExtension implements MoosyncExtensionTemplate {
+  private soundcloudApi = new SoundcloudApi()
   async onStarted() {
-    console.info('Extension started')
-    this.registerEvents()
-
-    this.interval = setInterval(() => {
-      this.setProgressbarWidth()
-    }, 1000)
-
-    api.setContextMenuItem({
-      type: 'SONGS',
-      label: 'Test context menu item',
-      handler: (songs) => {
-        console.info('Clicked context menu item with data', songs)
-      }
-    })
+    await this.fetchPreferences()
+    this.registerListeners()
+    console.info('Started soundcloud extension')
   }
 
-  private async onSongChanged(song: Song) {
-    console.debug(song)
-  }
+  private async fetchPreferences() {
+    const key = await api.getSecure<string>('apiKey')
+    const gen = await this.soundcloudApi.generateKey(key)
 
-  private async onPlayerStateChanged(state: PlayerState) {
-    console.debug(state)
-  }
-
-  private async onSongQueueChanged(queue: SongQueue) {
-    console.debug(queue.index)
-  }
-
-  private async onVolumeChanged(volume: number) {
-    console.debug(volume)
-  }
-
-  async onStopped() {
-    // Cleanup intervals, timeout, etc in onStopped
-    if (this.interval) {
-      clearInterval(this.interval)
+    if (gen !== key) {
+      await api.setSecure('apiKey', gen)
     }
-
-    console.info('Extension stopped')
   }
 
-  private async onPreferenceChanged({ key, value }: { key: string; value: any }): Promise<void> {
-    console.info('Preferences changed at', key, 'with value', value)
-  }
-
-  async setProgressbarWidth() {
-    await api.setPreferences('test_progressBar', Math.random() * 100 + 1)
-  }
-
-  private async registerEvents() {
-    api.on('requestedPlaylists', async () => {
+  private registerListeners() {
+    api.on('requestSearchResult', async (term) => {
+      const songs = await this.soundcloudApi.searchSong(term)
       return {
-        playlists: [samplePlaylist]
+        providerName: 'Soundcloud',
+        songs
       }
     })
 
-    api.on('requestedPlaylistSongs', async () => {
-      return {
-        songs: [sampleSong]
-      }
+    api.on('requestedSongFromURL', async (url) => {
+      const song = await this.soundcloudApi.getSong(url)
+      if (song) return { song }
     })
 
-    api.on('requestedLyrics', async (song) => {
-      return 'Lorem Ipsum'
-    })
-
-    api.on('requestSearchResult', async (searchTerm) => {
-      return {
-        providerName: 'Example provider',
-        songs: [sampleSong]
-      }
-    })
-
-    api.on('playerStateChanged', this.onPlayerStateChanged.bind(this))
-    api.on('preferenceChanged', this.onPreferenceChanged.bind(this))
-    api.on('volumeChanged', this.onVolumeChanged.bind(this))
-    api.on('songChanged', this.onSongChanged.bind(this))
-    api.on('songQueueChanged', this.onSongQueueChanged.bind(this))
-    api.on('seeked', async (time) => console.debug('Player seeked to', time))
-
-    await api.registerOAuth('exampleOAuth') /* Callback paths are case-insensitive */
-
-    api.on('oauthCallback', async (url) => {
-      console.info('OAuth callback triggered', url)
+    api.on('requestedPlaylistFromURL', async (url) => {
+      const data = await this.soundcloudApi.getPlaylist(url)
+      if (data) return { songs: data.songs, playlist: data.playlist }
     })
   }
 }

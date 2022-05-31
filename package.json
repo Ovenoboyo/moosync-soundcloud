@@ -1,12 +1,12 @@
 {
-  "name": "moosync.extension.starter",
+  "name": "moosync.soundcloud",
   "version": "1.0.0",
-  "description": "A sample extension",
+  "description": "Soundcloud integration for moosync",
   "main": "src/index.ts",
   "icon": "assets/icon.svg",
   "extensionEntry": "dist/index.js",
   "moosyncExtension": true,
-  "displayName": "MyExtension",
+  "displayName": "Soundcloud",
   "scripts": {
     "watch:build": "webpack --watch",
     "webpack:build": "webpack --config webpack.config.js",
@@ -20,5 +20,8 @@
     "typescript": "^4.7.2",
     "webpack": "^5.72.1",
     "webpack-cli": "^4.9.2"
+  },
+  "dependencies": {
+    "soundcloud-scraper": "^5.0.2"
   }
 }
