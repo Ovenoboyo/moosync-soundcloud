@@ -6,7 +6,7 @@
   "icon": "assets/icon.svg",
   "extensionEntry": "dist/index.js",
   "moosyncExtension": true,
-  "displayName": "Soundcloud",
+  "displayName": "Soundcloud Integration",
   "scripts": {
     "watch:build": "webpack --watch",
     "webpack:build": "webpack --config webpack.config.js",
