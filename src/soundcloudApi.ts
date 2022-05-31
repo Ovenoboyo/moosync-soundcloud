@@ -56,7 +56,7 @@ export class SoundcloudApi {
     try {
       let data: Soundcloud.Song = this.cacheHandler.getParsedCache(`song:${url}`)
       if (!data) {
-        data = await this.client?.getSongInfo(url.substring(0, url.indexOf('?')), {
+        data = await this.client?.getSongInfo(url.indexOf('?') !== -1 ? url.substring(0, url.indexOf('?')) : url, {
           fetchStreamURL: true
         })
         this.cacheHandler.addToCache(`song:${url}`, JSON.stringify(data))
@@ -84,10 +84,12 @@ export class SoundcloudApi {
     try {
       let data: Soundcloud.Playlist = this.cacheHandler.getParsedCache(`playlist:${url}`)
       if (!data) {
-        data = await this.client?.getPlaylist(url.substring(0, url.indexOf('?')))
+        data = await this.client?.getPlaylist(url.indexOf('?') !== -1 ? url.substring(0, url.indexOf('?')) : url)
         this.cacheHandler.addToCache(`playlist:${url}`, JSON.stringify(data))
       }
-      return this.parsePlaylist(data)
+      if (data) {
+        return this.parsePlaylist(data)
+      }
     } catch (e) {
       console.debug('Failed to parse URL as soundcloud playlist', e)
     }

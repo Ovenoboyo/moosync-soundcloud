@@ -36,5 +36,12 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
       const data = await this.soundcloudApi.getPlaylist(url)
       if (data) return { songs: data.songs, playlist: data.playlist }
     })
+
+    api.on('playbackDetailsRequested', async (song) => {
+      if (song.url) {
+        const data = await this.soundcloudApi.getSong(song.url)
+        return { duration: data.duration, url: data.playbackUrl }
+      }
+    })
   }
 }

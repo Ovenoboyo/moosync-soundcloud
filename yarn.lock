@@ -886,10 +886,9 @@ signal-exit@^3.0.3:
   resolved "https://registry.yarnpkg.com/signal-exit/-/signal-exit-3.0.7.tgz#a9a1767f8af84155114eaabd73f99273c8f59ad9"
   integrity sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==
 
-soundcloud-scraper@^5.0.2:
+"soundcloud-scraper@git+https://github.com/maskalix/soundcloud-scraper#patch-1":
   version "5.0.2"
-  resolved "https://registry.yarnpkg.com/soundcloud-scraper/-/soundcloud-scraper-5.0.2.tgz#3ec6bc74688869164eb7ca1b0759078e09e1d8c2"
-  integrity sha512-QAPvRIG4eefc7JdmCQCG/QEhm4D90XgHbe9lJMHmKIxU0INdAD2LycUR1m0mCIKF3F2dk4NvGEkxGfVLI8Af+A==
+  resolved "git+https://github.com/maskalix/soundcloud-scraper#2ce17d2c9c194ad447d703f8371bbb93a0284304"
   dependencies:
     cheerio "^1.0.0-rc.10"
     m3u8stream "^0.8.4"
