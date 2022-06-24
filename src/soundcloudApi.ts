@@ -109,7 +109,7 @@ export class SoundcloudApi {
     for (const data of artists) {
       ret.push({
         artist_id: data.urn.toString(),
-        artist_name: data.full_name ?? data.username,
+        artist_name: data.full_name || data.username,
         artist_coverPath: data.avatar_url,
         artist_extra_info: {
           extensions: {
@@ -219,7 +219,7 @@ export class SoundcloudApi {
           artists: [
             {
               artist_id: t.user_id.toString(),
-              artist_name: t.user.full_name ?? t.user.username,
+              artist_name: t.user.full_name || t.user.username,
               artist_coverPath: t.user.avatar_url
             }
           ],
