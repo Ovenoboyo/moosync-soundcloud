@@ -258,8 +258,3 @@ export class SoundcloudApi {
     return tracks
   }
 }
-
-const scapi = new SoundcloudApi()
-scapi.generateKey('wWZrDYsQemr1p5WldG0mp2zzuwhoSMG2').then(() => {
-  scapi.searchSongs('hello').then(console.log)
-})
