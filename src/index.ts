@@ -5,7 +5,6 @@ import {
   MoosyncExtensionTemplate
 } from '@moosync/moosync-types'
 import { SoundCloudExtension } from './extension'
-
 export default class MyExtensionData implements ExtensionData {
   extensionDescriptors: ExtensionFactory[] = [new MyExtensionFactory()]
 }
