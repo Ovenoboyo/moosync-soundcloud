@@ -1,5 +1,6 @@
 import { MoosyncExtensionTemplate } from '@moosync/moosync-types'
 import { SoundcloudApi } from './soundcloudApi'
+import semver from 'semver'
 
 export class SoundCloudExtension implements MoosyncExtensionTemplate {
   private soundcloudApi = new SoundcloudApi()
@@ -19,11 +20,14 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
   }
 
   private registerListeners() {
-    api.on('requestSearchResult', async (term) => {
+    api.registerSearchProvider('Soundcloud')
+    api.on('requestedSearchResult', async (term) => {
       const songs = await this.soundcloudApi.searchSong(term)
       return {
-        providerName: 'Soundcloud',
-        songs
+        songs,
+        artists: [],
+        albums: [],
+        playlists: []
       }
     })
 
