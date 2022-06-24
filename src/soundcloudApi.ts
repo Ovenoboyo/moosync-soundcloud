@@ -7,9 +7,9 @@ const SCRIPT_URL_MATCH_REGEX =
   /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 const CLIENT_ID_MATCH_REGEX =
   /(https:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
+
 export class SoundcloudApi {
   private cacheHandler = new CacheHandler('./soundcloud.cache', false)
-  // private client?: Soundcloud.Client
   private key?: string
 
   private async fetchKey() {
@@ -53,6 +53,12 @@ export class SoundcloudApi {
       })
       const parsedUrl = new URL('https://api-v2.soundcloud.com' + url + '?' + parsedParams.toString())
 
+      const cache = this.cacheHandler.getParsedCache<T>(parsedUrl.toString())
+      if (cache) {
+        resolve(cache)
+        return
+      }
+
       const request = https.get({
         host: parsedUrl.host,
         path: parsedUrl.pathname + '?' + parsedUrl.searchParams.toString(),
@@ -65,7 +71,11 @@ export class SoundcloudApi {
         if (data.statusCode === 200) {
           let ret = ''
           data.on('data', (chunk) => (ret += chunk))
-          data.on('end', () => resolve(JSON.parse(ret)))
+          data.on('end', () => {
+            const parsed = JSON.parse(ret)
+            this.cacheHandler.addToCache(parsedUrl.toString(), parsed)
+            resolve(parsed)
+          })
           data.on('error', reject)
         } else {
           reject('Failed to fetch with status code ' + data.statusCode + ', ' + data.statusMessage)
