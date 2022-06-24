@@ -3,6 +3,7 @@ import { Artists, Playlist, Song } from '@moosync/moosync-types'
 import { URL, URLSearchParams } from 'url'
 import https from 'https'
 
+// https://github.com/DevAndromeda/soundcloud-scraper/blob/master/src/constants/Constants.js
 const SCRIPT_URL_MATCH_REGEX =
   /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/
 const CLIENT_ID_MATCH_REGEX =
