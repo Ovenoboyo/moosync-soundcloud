@@ -207,25 +207,31 @@ export class SoundcloudApi {
     const songs: Song[] = []
 
     for (const t of tracks) {
-      if (t.streamable && t.media && t.media.transcodings.length > 1) {
-        songs.push({
-          _id: t.id.toString(),
-          title: t.title,
-          song_coverPath_high: t.artwork_url,
-          duration: t.full_duration / 1000,
-          url: t.media.transcodings[1].url,
-          date_added: Date.now(),
-          date: t.release_date,
-          genre: [t.genre],
-          artists: [
-            {
-              artist_id: t.user_id.toString(),
-              artist_name: t.user.full_name || t.user.username,
-              artist_coverPath: t.user.avatar_url
-            }
-          ],
-          type: 'URL'
-        })
+      if (t.streamable && t.media?.transcodings) {
+        console.log(t.media.transcodings)
+        const streamUrl = t.media.transcodings.find(
+          (val) => val.format.protocol === 'progressive' && !val.url.includes('preview')
+        )?.url
+        if (streamUrl) {
+          songs.push({
+            _id: t.id.toString(),
+            title: t.title,
+            song_coverPath_high: t.artwork_url,
+            duration: t.full_duration / 1000,
+            url: streamUrl,
+            date_added: Date.now(),
+            date: t.release_date,
+            genre: [t.genre],
+            artists: [
+              {
+                artist_id: t.user_id.toString(),
+                artist_name: t.user.full_name || t.user.username,
+                artist_coverPath: t.user.avatar_url
+              }
+            ],
+            type: 'URL'
+          })
+        }
       }
     }
 
@@ -233,7 +239,7 @@ export class SoundcloudApi {
   }
 
   public async getArtistSongs(urn: string) {
-    const tracks = []
+    const tracks: Song[] = []
 
     let next = ''
     do {
@@ -259,3 +265,11 @@ export class SoundcloudApi {
     return tracks
   }
 }
+
+// const scapi = new SoundcloudApi()
+// scapi.generateKey().then(() => {
+//   scapi.getArtistSongs('18693253').then((url) => {
+//     console.log(url[0].url)
+//     scapi.fetchStreamURL(url[0].url).then(console.log)
+//   })
+// })
