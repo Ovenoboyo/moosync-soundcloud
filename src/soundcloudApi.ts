@@ -14,7 +14,7 @@ export class SoundcloudApi {
   private key?: string
 
   private async fetchKey() {
-    const resp = await (await fetch('https://soundcloud.com')).text()
+    const resp = await this.getRaw(new URL('https://soundcloud.com'))
     const scripts = resp.split('<script crossorigin src="')
     const urls: string[] = []
     scripts.forEach((val) => {
@@ -27,7 +27,7 @@ export class SoundcloudApi {
 
     for (const u of urls) {
       if (CLIENT_ID_MATCH_REGEX.test(u)) {
-        const data = await (await fetch(u)).text()
+        const data = await this.getRaw(new URL(u))
         if (data.includes(',client_id:"')) {
           const a = data.split(',client_id:"')
           return a[1].split('"')[0]
@@ -46,23 +46,11 @@ export class SoundcloudApi {
     return key
   }
 
-  private async get<T>(url: string, params: Record<string, string | number>): Promise<T | undefined> {
-    return new Promise<T>((resolve, reject) => {
-      const parsedParams = new URLSearchParams({
-        ...params,
-        client_id: this.key
-      })
-      const parsedUrl = new URL('https://api-v2.soundcloud.com' + url + '?' + parsedParams.toString())
-
-      const cache = this.cacheHandler.getParsedCache<T>(parsedUrl.toString())
-      if (cache) {
-        resolve(cache)
-        return
-      }
-
+  private getRaw(url: URL) {
+    return new Promise<string>((resolve, reject) => {
       const request = https.get({
-        host: parsedUrl.host,
-        path: parsedUrl.pathname + '?' + parsedUrl.searchParams.toString(),
+        host: url.host,
+        path: url.pathname + '?' + url.searchParams.toString(),
         headers: {
           'x-requested-with': 'https://soundcloud.com'
         }
@@ -72,11 +60,7 @@ export class SoundcloudApi {
         if (data.statusCode === 200) {
           let ret = ''
           data.on('data', (chunk) => (ret += chunk))
-          data.on('end', () => {
-            const parsed = JSON.parse(ret)
-            this.cacheHandler.addToCache(parsedUrl.toString(), parsed)
-            resolve(parsed)
-          })
+          data.on('end', () => resolve(ret))
           data.on('error', reject)
         } else {
           reject('Failed to fetch with status code ' + data.statusCode + ', ' + data.statusMessage)
@@ -85,6 +69,22 @@ export class SoundcloudApi {
 
       request.on('error', reject)
     })
+  }
+
+  private async get<T>(url: string, params: Record<string, string | number>): Promise<T | undefined> {
+    const parsedParams = new URLSearchParams({
+      ...params,
+      client_id: this.key
+    })
+    const parsedUrl = new URL('https://api-v2.soundcloud.com' + url + '?' + parsedParams.toString())
+    const cache = this.cacheHandler.getParsedCache<T>(parsedUrl.toString())
+    if (cache) {
+      return cache
+    }
+
+    const resp = JSON.parse(await this.getRaw(parsedUrl))
+    this.cacheHandler.addToCache(url.toString(), resp)
+    return resp
   }
 
   public async parseUrl(url: string) {
