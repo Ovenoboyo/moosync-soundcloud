@@ -206,7 +206,7 @@ export class SoundcloudApi {
     const songs: Song[] = []
 
     for (const t of tracks) {
-      if (t.streamable && t.media) {
+      if (t.streamable && t.media && t.media.transcodings.length > 1) {
         songs.push({
           _id: t.id.toString(),
           title: t.title,
