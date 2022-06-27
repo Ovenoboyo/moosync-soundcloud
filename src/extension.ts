@@ -67,8 +67,17 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
     api.on('playbackDetailsRequested', async (song) => {
       console.log('requested playback url')
       if (song.url) {
-        const data = await this.soundcloudApi.fetchStreamURL(song.url)
+        const data = await this.soundcloudApi.fetchFromStreamURL(song.url)
         return { duration: song.duration, url: data.url }
+      }
+    })
+
+    api.on('customRequest', async (url) => {
+      try {
+        const redirectUrl = await this.soundcloudApi.getSongStreamById(new URL(url).pathname.substring(1))
+        return { redirectUrl }
+      } catch (e) {
+        console.error(e, url)
       }
     })
   }

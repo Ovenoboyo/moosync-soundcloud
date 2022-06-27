@@ -177,7 +177,22 @@ export class SoundcloudApi {
     return result
   }
 
-  public fetchStreamURL(url: string) {
+  public async getSongStreamById(id: string) {
+    const cache = this.cacheHandler.getCache(`song:${id}`)
+    let streamURL = ''
+    if (cache) {
+      streamURL = cache
+    }
+
+    if (!streamURL) {
+      streamURL = this.findStreamURL(await this.get<Tracks>(`/tracks/${id}`, {}))
+      this.cacheHandler.addToCache(`song:${id}`, streamURL)
+    }
+
+    if (streamURL) return (await this.fetchFromStreamURL(streamURL)).url
+  }
+
+  public fetchFromStreamURL(url: string) {
     return new Promise<{ url: string }>((resolve, reject) => {
       const parsedUrl = new URL(url)
       const request = https.get({
@@ -203,22 +218,29 @@ export class SoundcloudApi {
     })
   }
 
+  private findStreamURL(track: Tracks) {
+    const streamUrl = track.media.transcodings.find(
+      (val) => val.format.protocol === 'progressive' && !val.url.includes('preview')
+    )?.url
+
+    return streamUrl
+  }
+
   private parseSongs(...tracks: TrackInfo['collection']) {
     const songs: Song[] = []
 
     for (const t of tracks) {
       if (t.streamable && t.media?.transcodings) {
-        console.log(t.media.transcodings)
-        const streamUrl = t.media.transcodings.find(
-          (val) => val.format.protocol === 'progressive' && !val.url.includes('preview')
-        )?.url
+        const streamUrl = this.findStreamURL(t)
         if (streamUrl) {
+          this.cacheHandler.addToCache(`song:${t.id}`, streamUrl)
           songs.push({
             _id: t.id.toString(),
             title: t.title,
             song_coverPath_high: t.artwork_url,
             duration: t.full_duration / 1000,
-            url: streamUrl,
+            url: t.uri,
+            playbackUrl: `extension://${api.packageName}/${t.id}`,
             date_added: Date.now(),
             date: t.release_date,
             genre: [t.genre],
@@ -266,10 +288,13 @@ export class SoundcloudApi {
   }
 }
 
+// const api = {
+//   packageName: 'moosync.soundcloud'
+// }
 // const scapi = new SoundcloudApi()
 // scapi.generateKey().then(() => {
 //   scapi.getArtistSongs('18693253').then((url) => {
-//     console.log(url[0].url)
-//     scapi.fetchStreamURL(url[0].url).then(console.log)
+//     console.log(url[0]._id)
+//     scapi.getSongStreamById('/' + url[0]._id).then(console.log)
 //   })
 // })
