@@ -87,19 +87,34 @@ export class SoundcloudApi {
     return resp
   }
 
+  private async fetchTrackDetails(...ids: number[]) {
+    const tracks: Tracks[] = []
+    while (ids.length > 0) {
+      const reducedIds = ids.splice(0, 49)
+      const resp = await this.get<Tracks[]>('/tracks', {
+        ids: reducedIds.join(',')
+      })
+      tracks.push(...resp)
+    }
+
+    return tracks
+  }
+
   public async parseUrl(url: string) {
     if (url.startsWith('https://soundcloud.com')) {
       const data = await this.get<{ kind: string }>('/resolve', {
         url
       })
+
       if (data.kind === 'track') {
         return this.parseSongs(data as Tracks)[0]
       }
 
       if (data.kind === 'playlist') {
+        const details = await this.fetchTrackDetails(...(data as Playlists).tracks.map((val) => val.id))
         return {
           playlist: this.parsePlaylists(data as Playlists)[0],
-          songs: this.parseSongs(...(data as Playlists).tracks)
+          songs: this.parseSongs(...details)
         }
       }
     }
@@ -293,8 +308,9 @@ export class SoundcloudApi {
 // }
 // const scapi = new SoundcloudApi()
 // scapi.generateKey().then(() => {
-//   scapi.getArtistSongs('18693253').then((url) => {
-//     console.log(url[0]._id)
-//     scapi.getSongStreamById('/' + url[0]._id).then(console.log)
-//   })
+//   scapi
+//     .parseUrl(
+//       'https://soundcloud.com/raad-rahman/sets/imagine-dragons?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing'
+//     )
+//     .then((val) => console.log((val as unknown as any).songs.length))
 // })
