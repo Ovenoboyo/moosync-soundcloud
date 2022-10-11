@@ -200,7 +200,7 @@ export class SoundcloudApi {
     }
 
     if (!streamURL) {
-      streamURL = this.findStreamURL(await this.get<Tracks>(`/tracks/${id}`, {}))
+      streamURL = this.findStreamURL(await this.getSongDetsById(id))
       this.cacheHandler.addToCache(`song:${id}`, streamURL)
     }
 
@@ -241,10 +241,14 @@ export class SoundcloudApi {
     return streamUrl
   }
 
-  private parseSongs(...tracks: TrackInfo['collection']) {
+  private async parseSongs(...tracks: TrackInfo['collection']) {
     const songs: Song[] = []
 
-    for (const t of tracks) {
+    for (let t of tracks) {
+      if (!t.title && t.id) {
+        t = await this.getSongDetsById(t.id.toString())
+      }
+
       if (t.streamable && t.media?.transcodings) {
         const streamUrl = this.findStreamURL(t)
         if (streamUrl) {
@@ -293,7 +297,7 @@ export class SoundcloudApi {
 
       const data = await this.get<TrackInfo>(`/users/${urn}/tracks`, params)
       if (data.collection) {
-        tracks.push(...this.parseSongs(...data.collection))
+        tracks.push(...(await this.parseSongs(...data.collection)))
       }
 
       next = data.next_href
@@ -301,16 +305,36 @@ export class SoundcloudApi {
 
     return tracks
   }
+
+  private async getSongDetsById(id: string) {
+    const cache = this.cacheHandler.getCache(`songDets:${id}`)
+    let dets = ''
+    if (cache) {
+      return JSON.parse(dets)
+    }
+
+    const trackDets = await this.get<Tracks>(`/tracks/${id}`, {})
+    this.cacheHandler.addToCache(`songDets:${id}`, JSON.stringify(trackDets))
+    return trackDets
+  }
+
+  public async getPlaylistSongs(playlistId: string) {
+    const data = await this.get<Playlists>(`/playlists/${playlistId}`, {})
+    for (const track in data.tracks) {
+      const t = data.tracks[track]
+      if (!t.title && t.id) {
+        data.tracks[track] = await this.getSongDetsById(t.id.toString())
+      }
+    }
+    const parsedTracks = await this.parseSongs(...data.tracks)
+    return parsedTracks
+  }
 }
 
-// const api = {
-//   packageName: 'moosync.soundcloud'
-// }
-// const scapi = new SoundcloudApi()
-// scapi.generateKey().then(() => {
-//   scapi
-//     .parseUrl(
-//       'https://soundcloud.com/raad-rahman/sets/imagine-dragons?utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing'
-//     )
-//     .then((val) => console.log((val as unknown as any).songs.length))
-// })
+const api = {
+  packageName: 'moosync.soundcloud'
+}
+const scapi = new SoundcloudApi()
+scapi.generateKey().then(() => {
+  scapi.getPlaylistSongs('282620842').then(console.log)
+})

@@ -80,5 +80,13 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
         console.error(e, url)
       }
     })
+
+    api.on('requestedPlaylistSongs', async (id) => {
+      const playlistId = id.replace('moosync.soundcloud', '')
+      const songs = await this.soundcloudApi.getPlaylistSongs(playlistId)
+      return {
+        songs
+      }
+    })
   }
 }
