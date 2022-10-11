@@ -308,9 +308,8 @@ export class SoundcloudApi {
 
   private async getSongDetsById(id: string) {
     const cache = this.cacheHandler.getCache(`songDets:${id}`)
-    let dets = ''
     if (cache) {
-      return JSON.parse(dets)
+      return JSON.parse(cache)
     }
 
     const trackDets = await this.get<Tracks>(`/tracks/${id}`, {})
