@@ -107,14 +107,14 @@ export class SoundcloudApi {
       })
 
       if (data.kind === 'track') {
-        return this.parseSongs(data as Tracks)[0]
+        return await this.parseSongs(data as Tracks)[0]
       }
 
       if (data.kind === 'playlist') {
         const details = await this.fetchTrackDetails(...(data as Playlists).tracks.map((val) => val.id))
         return {
           playlist: this.parsePlaylists(data as Playlists)[0],
-          songs: this.parseSongs(...details)
+          songs: await this.parseSongs(...details)
         }
       }
     }
@@ -181,7 +181,7 @@ export class SoundcloudApi {
       limit: 50
     })
 
-    return this.parseSongs(...data.collection)
+    return await this.parseSongs(...data.collection)
   }
 
   private paramsToObject(entries: IterableIterator<[string, string]>) {
@@ -331,10 +331,10 @@ export class SoundcloudApi {
   }
 }
 
-const api = {
-  packageName: 'moosync.soundcloud'
-}
-const scapi = new SoundcloudApi()
-scapi.generateKey().then(() => {
-  scapi.getPlaylistSongs('282620842').then(console.log)
-})
+// const api = {
+//   packageName: 'moosync.soundcloud'
+// }
+// const scapi = new SoundcloudApi()
+// scapi.generateKey().then(() => {
+//   scapi.getPlaylistSongs('282620842').then(console.log)
+// })
