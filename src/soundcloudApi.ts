@@ -71,14 +71,18 @@ export class SoundcloudApi {
     })
   }
 
-  private async get<T>(url: string, params: Record<string, string | number>): Promise<T | undefined> {
+  private async get<T>(
+    url: string,
+    params: Record<string, string | number>,
+    invalidateCache: boolean
+  ): Promise<T | undefined> {
     const parsedParams = new URLSearchParams({
       ...params,
       client_id: this.key
     })
     const parsedUrl = new URL('https://api-v2.soundcloud.com' + url + '?' + parsedParams.toString())
     const cache = this.cacheHandler.getParsedCache<T>(parsedUrl.toString())
-    if (cache) {
+    if (cache && !invalidateCache) {
       return cache
     }
 
@@ -87,34 +91,45 @@ export class SoundcloudApi {
     return resp
   }
 
-  private async fetchTrackDetails(...ids: number[]) {
+  private async fetchTrackDetails(invalidateCache: boolean, ...ids: number[]) {
     const tracks: Tracks[] = []
     while (ids.length > 0) {
       const reducedIds = ids.splice(0, 49)
-      const resp = await this.get<Tracks[]>('/tracks', {
-        ids: reducedIds.join(',')
-      })
+      const resp = await this.get<Tracks[]>(
+        '/tracks',
+        {
+          ids: reducedIds.join(',')
+        },
+        invalidateCache
+      )
       tracks.push(...resp)
     }
 
     return tracks
   }
 
-  public async parseUrl(url: string) {
+  public async parseUrl(url: string, invalidateCache: boolean) {
     if (url.startsWith('https://soundcloud.com')) {
-      const data = await this.get<{ kind: string }>('/resolve', {
-        url
-      })
+      const data = await this.get<{ kind: string }>(
+        '/resolve',
+        {
+          url
+        },
+        invalidateCache
+      )
 
       if (data.kind === 'track') {
-        return await this.parseSongs(data as Tracks)[0]
+        return await this.parseSongs(invalidateCache, data as Tracks)[0]
       }
 
       if (data.kind === 'playlist') {
-        const details = await this.fetchTrackDetails(...(data as Playlists).tracks.map((val) => val.id))
+        const details = await this.fetchTrackDetails(
+          invalidateCache,
+          ...(data as Playlists).tracks.map((val) => val.id)
+        )
         return {
           playlist: this.parsePlaylists(data as Playlists)[0],
-          songs: await this.parseSongs(...details)
+          songs: await this.parseSongs(invalidateCache, ...details)
         }
       }
     }
@@ -140,12 +155,16 @@ export class SoundcloudApi {
     return ret
   }
 
-  public async searchArtist(artist_name: string) {
+  public async searchArtist(artist_name: string, invalidateCache: boolean) {
     try {
-      const data = await this.get<UserInfo>('/search/users', {
-        q: artist_name,
-        limit: 50
-      })
+      const data = await this.get<UserInfo>(
+        '/search/users',
+        {
+          q: artist_name,
+          limit: 50
+        },
+        invalidateCache
+      )
 
       return this.parseArtists(...data.collection)
     } catch (e) {
@@ -166,22 +185,30 @@ export class SoundcloudApi {
     return ret
   }
 
-  public async searchPlaylists(term: string) {
-    const data = await this.get<PlaylistInfo>('/search/playlists', {
-      q: term,
-      limit: 50
-    })
+  public async searchPlaylists(term: string, invalidateCache: boolean) {
+    const data = await this.get<PlaylistInfo>(
+      '/search/playlists',
+      {
+        q: term,
+        limit: 50
+      },
+      invalidateCache
+    )
 
     return this.parsePlaylists(...data.collection)
   }
 
-  public async searchSongs(term: string) {
-    const data = await this.get<TrackInfo>('/search/tracks', {
-      q: term,
-      limit: 50
-    })
+  public async searchSongs(term: string, invalidateCache: boolean) {
+    const data = await this.get<TrackInfo>(
+      '/search/tracks',
+      {
+        q: term,
+        limit: 50
+      },
+      invalidateCache
+    )
 
-    return await this.parseSongs(...data.collection)
+    return await this.parseSongs(invalidateCache, ...data.collection)
   }
 
   private paramsToObject(entries: IterableIterator<[string, string]>) {
@@ -192,7 +219,7 @@ export class SoundcloudApi {
     return result
   }
 
-  public async getSongStreamById(id: string) {
+  public async getSongStreamById(id: string, invalidateCache: boolean) {
     const cache = this.cacheHandler.getCache(`song:${id}`)
     let streamURL = ''
     if (cache) {
@@ -200,7 +227,7 @@ export class SoundcloudApi {
     }
 
     if (!streamURL) {
-      streamURL = this.findStreamURL(await this.getSongDetsById(id))
+      streamURL = this.findStreamURL(await this.getSongDetsById(id, invalidateCache))
       this.cacheHandler.addToCache(`song:${id}`, streamURL)
     }
 
@@ -241,12 +268,12 @@ export class SoundcloudApi {
     return streamUrl
   }
 
-  private async parseSongs(...tracks: TrackInfo['collection']) {
+  private async parseSongs(invalidateCache: boolean, ...tracks: TrackInfo['collection']) {
     const songs: Song[] = []
 
     for (let t of tracks) {
       if (!t.title && t.id) {
-        t = await this.getSongDetsById(t.id.toString())
+        t = await this.getSongDetsById(t.id.toString(), invalidateCache)
       }
 
       if (t.streamable && t.media?.transcodings) {
@@ -279,7 +306,7 @@ export class SoundcloudApi {
     return songs
   }
 
-  public async getArtistSongs(urn: string) {
+  public async getArtistSongs(urn: string, invalidateCache: boolean) {
     const tracks: Song[] = []
 
     let next = ''
@@ -295,9 +322,9 @@ export class SoundcloudApi {
         }
       }
 
-      const data = await this.get<TrackInfo>(`/users/${urn}/tracks`, params)
+      const data = await this.get<TrackInfo>(`/users/${urn}/tracks`, params, invalidateCache)
       if (data.collection) {
-        tracks.push(...(await this.parseSongs(...data.collection)))
+        tracks.push(...(await this.parseSongs(invalidateCache, ...data.collection)))
       }
 
       next = data.next_href
@@ -306,26 +333,26 @@ export class SoundcloudApi {
     return tracks
   }
 
-  private async getSongDetsById(id: string) {
+  private async getSongDetsById(id: string, invalidateCache: boolean) {
     const cache = this.cacheHandler.getCache(`songDets:${id}`)
-    if (cache) {
+    if (cache && !invalidateCache) {
       return JSON.parse(cache)
     }
 
-    const trackDets = await this.get<Tracks>(`/tracks/${id}`, {})
+    const trackDets = await this.get<Tracks>(`/tracks/${id}`, {}, invalidateCache)
     this.cacheHandler.addToCache(`songDets:${id}`, JSON.stringify(trackDets))
     return trackDets
   }
 
-  public async getPlaylistSongs(playlistId: string) {
-    const data = await this.get<Playlists>(`/playlists/${playlistId}`, {})
+  public async getPlaylistSongs(playlistId: string, invalidateCache: boolean) {
+    const data = await this.get<Playlists>(`/playlists/${playlistId}`, {}, invalidateCache)
     for (const track in data.tracks) {
       const t = data.tracks[track]
       if (!t.title && t.id) {
-        data.tracks[track] = await this.getSongDetsById(t.id.toString())
+        data.tracks[track] = await this.getSongDetsById(t.id.toString(), invalidateCache)
       }
     }
-    const parsedTracks = await this.parseSongs(...data.tracks)
+    const parsedTracks = await this.parseSongs(invalidateCache, ...data.tracks)
     return parsedTracks
   }
 }

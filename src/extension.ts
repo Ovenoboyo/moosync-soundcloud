@@ -21,9 +21,9 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
   private registerListeners() {
     api.registerSearchProvider('Soundcloud')
     api.on('requestedSearchResult', async (term) => {
-      const songs = await this.soundcloudApi.searchSongs(term)
-      const artists = await this.soundcloudApi.searchArtist(term)
-      const playlists = await this.soundcloudApi.searchPlaylists(term)
+      const songs = await this.soundcloudApi.searchSongs(term, false)
+      const artists = await this.soundcloudApi.searchArtist(term, false)
+      const playlists = await this.soundcloudApi.searchPlaylists(term, false)
       return {
         songs,
         artists,
@@ -37,7 +37,7 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
       const extraInfo = api.utils.getArtistExtraInfo(artist)
       let artistId: string
       if (!extraInfo || !extraInfo['artist_id']) {
-        const soundcloudArtist = (await this.soundcloudApi.searchArtist(artist.artist_name))[0]
+        const soundcloudArtist = (await this.soundcloudApi.searchArtist(artist.artist_name, false))[0]
         if (soundcloudArtist) {
           artistId = api.utils.getArtistExtraInfo(soundcloudArtist).artist_id
           await api.setArtistEditableInfo(artist.artist_id, {
@@ -48,19 +48,19 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
         artistId = extraInfo['artist_id']
       }
 
-      const songs = await this.soundcloudApi.getArtistSongs(artistId)
+      const songs = await this.soundcloudApi.getArtistSongs(artistId, false)
       return {
         songs
       }
     })
 
     api.on('requestedSongFromURL', async (url) => {
-      const song = (await this.soundcloudApi.parseUrl(url)) as unknown as Song
+      const song = (await this.soundcloudApi.parseUrl(url, false)) as unknown as Song
       if (song) return { song }
     })
 
     api.on('requestedPlaylistFromURL', async (url) => {
-      const data = (await this.soundcloudApi.parseUrl(url)) as unknown as { songs: Song[]; playlist: Playlist }
+      const data = (await this.soundcloudApi.parseUrl(url, false)) as unknown as { songs: Song[]; playlist: Playlist }
       if (data) return { songs: data.songs, playlist: data.playlist }
     })
 
@@ -74,16 +74,16 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
 
     api.on('customRequest', async (url) => {
       try {
-        const redirectUrl = await this.soundcloudApi.getSongStreamById(new URL(url).pathname.substring(1))
+        const redirectUrl = await this.soundcloudApi.getSongStreamById(new URL(url).pathname.substring(1), false)
         return { redirectUrl }
       } catch (e) {
         console.error(e, url)
       }
     })
 
-    api.on('requestedPlaylistSongs', async (id) => {
+    api.on('requestedPlaylistSongs', async (id, invalidateCache) => {
       const playlistId = id.replace('moosync.soundcloud:', '')
-      const songs = await this.soundcloudApi.getPlaylistSongs(playlistId)
+      const songs = await this.soundcloudApi.getPlaylistSongs(playlistId, invalidateCache)
       return {
         songs
       }
