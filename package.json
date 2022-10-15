@@ -1,12 +1,12 @@
 {
   "name": "moosync.soundcloud",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Soundcloud integration for moosync",
   "main": "src/index.ts",
   "icon": "assets/icon.svg",
   "extensionEntry": "dist/index.js",
   "moosyncExtension": true,
-  "displayName": "Soundcloud Integration",
+  "displayName": "Soundcloud",
   "scripts": {
     "watch:build": "webpack --watch",
     "webpack:build": "webpack --config webpack.config.js",
