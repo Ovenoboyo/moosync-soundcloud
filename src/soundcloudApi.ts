@@ -144,7 +144,7 @@ export class SoundcloudApi {
         artist_coverPath: data.avatar_url,
         artist_extra_info: {
           extensions: {
-            'moosync.soundcloud': {
+            [api.utils.packageName]: {
               artist_id: data.urn.replace('soundcloud:users:', '')
             }
           }
@@ -226,6 +226,7 @@ export class SoundcloudApi {
       streamURL = cache
     }
 
+    console.log('finding url')
     if (!streamURL) {
       streamURL = this.findStreamURL(await this.getSongDetsById(id, invalidateCache))
       this.cacheHandler.addToCache(`song:${id}`, streamURL)
@@ -236,6 +237,7 @@ export class SoundcloudApi {
 
   public fetchFromStreamURL(url: string) {
     return new Promise<{ url: string }>((resolve, reject) => {
+      console.log('fetching url from', url, this.key)
       const parsedUrl = new URL(url)
       const request = https.get({
         host: parsedUrl.host,
@@ -268,6 +270,13 @@ export class SoundcloudApi {
     return streamUrl
   }
 
+  async getSongById(id: number, invalidateCache = false) {
+    const dets = (await this.fetchTrackDetails(invalidateCache, id))[0]
+    if (dets) {
+      return (await this.parseSongs(invalidateCache, dets))[0]
+    }
+  }
+
   private async parseSongs(invalidateCache: boolean, ...tracks: TrackInfo['collection']) {
     const songs: Song[] = []
 
@@ -286,7 +295,7 @@ export class SoundcloudApi {
             song_coverPath_high: t.artwork_url,
             duration: t.full_duration / 1000,
             url: t.uri,
-            playbackUrl: `extension://${api.packageName}/${t.id}`,
+            playbackUrl: `extension://${api.utils.packageName}/${t.id}`,
             date_added: Date.now(),
             date: t.release_date,
             genre: [t.genre],
@@ -294,7 +303,14 @@ export class SoundcloudApi {
               {
                 artist_id: t.user_id.toString(),
                 artist_name: t.user.full_name || t.user.username,
-                artist_coverPath: t.user.avatar_url
+                artist_coverPath: t.user.avatar_url,
+                artist_extra_info: {
+                  extensions: {
+                    [api.utils.packageName]: {
+                      artist_id: t.urn.replace('soundcloud:users:', '')
+                    }
+                  }
+                }
               }
             ],
             type: 'URL'
@@ -333,7 +349,7 @@ export class SoundcloudApi {
     return tracks
   }
 
-  private async getSongDetsById(id: string, invalidateCache: boolean) {
+  public async getSongDetsById(id: string, invalidateCache: boolean): Promise<Tracks> {
     const cache = this.cacheHandler.getCache(`songDets:${id}`)
     if (cache && !invalidateCache) {
       return JSON.parse(cache)

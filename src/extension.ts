@@ -63,16 +63,17 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
     })
 
     api.on('playbackDetailsRequested', async (song) => {
-      console.log('requested playback url')
-      if (song.url) {
-        const data = await this.soundcloudApi.fetchFromStreamURL(song.url)
-        return { duration: song.duration, url: data.url }
-      }
+      // if (song.url) {
+      // const data = await this.soundcloudApi.fetchFromStreamURL(song.url)
+      // return { duration: song.duration, url: data.url }
+      // }
     })
 
     api.on('customRequest', async (url) => {
       try {
+        console.log('got custom request', url)
         const redirectUrl = await this.soundcloudApi.getSongStreamById(new URL(url).pathname.substring(1), false)
+        console.log('got redirect url', redirectUrl)
         return { redirectUrl }
       } catch (e) {
         console.error(e, url)
@@ -84,6 +85,13 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
       const songs = await this.soundcloudApi.getPlaylistSongs(playlistId, invalidateCache)
       return {
         songs
+      }
+    })
+
+    api.on('requestedSongFromId', async (id) => {
+      const song = await this.soundcloudApi.getSongById(parseInt(id), false)
+      return {
+        song
       }
     })
   }
