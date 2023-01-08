@@ -19,7 +19,6 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
   }
 
   private registerListeners() {
-    api.registerSearchProvider('Soundcloud')
     api.on('requestedSearchResult', async (term) => {
       const songs = await this.soundcloudApi.searchSongs(term, false)
       const artists = await this.soundcloudApi.searchArtist(term, false)
@@ -32,7 +31,6 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
       }
     })
 
-    api.registerArtistSongProvider('Soundcloud')
     api.on('requestedArtistSongs', async (artist) => {
       const extraInfo = api.utils.getArtistExtraInfo(artist)
       let artistId: string
