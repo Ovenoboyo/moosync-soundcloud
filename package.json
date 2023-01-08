@@ -1,6 +1,6 @@
 {
   "name": "moosync.soundcloud",
-  "version": "2.0.1",
+  "version": "2.1.1",
   "description": "Soundcloud integration for moosync",
   "main": "src/index.ts",
   "icon": "assets/icon.svg",
