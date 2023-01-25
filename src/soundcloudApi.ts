@@ -57,13 +57,19 @@ export class SoundcloudApi {
       })
 
       request.on('response', (data) => {
+        let ret = ''
+        data.on('data', (chunk) => (ret += chunk))
+
         if (data.statusCode === 200) {
-          let ret = ''
-          data.on('data', (chunk) => (ret += chunk))
           data.on('end', () => resolve(ret))
           data.on('error', reject)
         } else {
-          reject('Failed to fetch with status code ' + data.statusCode + ', ' + data.statusMessage)
+          data.on('end', () =>
+            reject({
+              data,
+              message: 'Failed to fetch with status code ' + data.statusCode + ', ' + data.statusMessage + ': ' + ret
+            })
+          )
         }
       })
 
@@ -74,7 +80,8 @@ export class SoundcloudApi {
   private async get<T>(
     url: string,
     params: Record<string, string | number>,
-    invalidateCache: boolean
+    invalidateCache: boolean,
+    maxTries = 0
   ): Promise<T | undefined> {
     const parsedParams = new URLSearchParams({
       ...params,
@@ -86,9 +93,18 @@ export class SoundcloudApi {
       return cache
     }
 
-    const resp = JSON.parse(await this.getRaw(parsedUrl))
-    this.cacheHandler.addToCache(url.toString(), resp)
-    return resp
+    try {
+      const resp = JSON.parse(await this.getRaw(parsedUrl))
+      this.cacheHandler.addToCache(url.toString(), resp)
+      return resp
+    } catch (e) {
+      console.error('Error fetching URL', parsedUrl, e)
+
+      if (e?.data?.statusCode === 401 && maxTries < 3) {
+        await this.fetchKey()
+        return this.get(url, params, invalidateCache)
+      }
+    }
   }
 
   private async fetchTrackDetails(invalidateCache: boolean, ...ids: number[]) {
@@ -118,11 +134,11 @@ export class SoundcloudApi {
         invalidateCache
       )
 
-      if (data.kind === 'track') {
+      if (data?.kind === 'track') {
         return await this.parseSongs(invalidateCache, data as Tracks)[0]
       }
 
-      if (data.kind === 'playlist') {
+      if (data?.kind === 'playlist') {
         const details = await this.fetchTrackDetails(
           invalidateCache,
           ...(data as Playlists).tracks.map((val) => val.id)
