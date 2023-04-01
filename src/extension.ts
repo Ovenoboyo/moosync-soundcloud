@@ -2,7 +2,12 @@ import { MoosyncExtensionTemplate, Playlist, Song } from '@moosync/moosync-types
 import { SoundcloudApi } from './soundcloudApi'
 
 export class SoundCloudExtension implements MoosyncExtensionTemplate {
-  private soundcloudApi = new SoundcloudApi()
+  private soundcloudApi = new SoundcloudApi(this.updateKey.bind(this))
+
+  private async updateKey(key: string) {
+    await api.setSecure('apiKey', key)
+  }
+
   async onStarted() {
     await this.fetchPreferences()
     this.registerListeners()
@@ -11,11 +16,7 @@ export class SoundCloudExtension implements MoosyncExtensionTemplate {
 
   private async fetchPreferences() {
     const key = await api.getSecure<string>('apiKey')
-    const gen = await this.soundcloudApi.generateKey(key)
-
-    if (gen !== key) {
-      await api.setSecure('apiKey', gen)
-    }
+    await this.soundcloudApi.generateKey(key)
   }
 
   private registerListeners() {

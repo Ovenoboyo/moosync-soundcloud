@@ -13,6 +13,8 @@ export class SoundcloudApi {
   private cacheHandler = new CacheHandler('./soundcloud.cache', false)
   private key?: string
 
+  constructor(private updateKeyCallback: (key: string) => Promise<void>) {}
+
   private async fetchKey() {
     const resp = await this.getRaw(new URL('https://soundcloud.com'))
     const scripts = resp.split('<script crossorigin src="')
@@ -42,8 +44,7 @@ export class SoundcloudApi {
     }
 
     this.key = key
-
-    return key
+    this.updateKeyCallback(key)
   }
 
   private getRaw(url: URL) {
@@ -101,8 +102,8 @@ export class SoundcloudApi {
       console.error('Error fetching URL', parsedUrl, e)
 
       if (e?.data?.statusCode === 401 && maxTries < 3) {
-        await this.fetchKey()
-        return this.get(url, params, invalidateCache)
+        this.key = await this.fetchKey()
+        return this.get(url, params, invalidateCache, maxTries + 1)
       }
     }
   }
@@ -388,11 +389,3 @@ export class SoundcloudApi {
     return parsedTracks
   }
 }
-
-// const api = {
-//   packageName: 'moosync.soundcloud'
-// }
-// const scapi = new SoundcloudApi()
-// scapi.generateKey().then(() => {
-//   scapi.getPlaylistSongs('282620842').then(console.log)
-// })
